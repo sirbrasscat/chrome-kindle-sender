@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Local Environment Variables & Secrets
+.env
+.env.local
+*.env
+
+# Local Test Artifacts
+test_sample.epub
+*.log
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

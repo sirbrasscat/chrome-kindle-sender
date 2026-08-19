@@ -1,0 +1,12 @@
+{
+  "name": "kindle-homelab-relay",
+  "version": "1.0.0",
+  "description": "Lightweight Homelab SMTP Relay for Web to Kindle Chrome Extension",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.10"
+  }
+}

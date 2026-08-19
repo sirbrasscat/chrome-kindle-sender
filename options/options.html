@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web to Kindle - Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-brand">
+        <svg class="header-icon" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+          <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/>
+        </svg>
+        <div>
+          <h1>Web to Kindle Settings</h1>
+          <p class="subtitle">Configure your Send-to-Kindle address and email delivery provider</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid-layout">
+      <!-- Main Settings Column -->
+      <div class="settings-column">
+        <form id="settings-form" autocomplete="off">
+          
+          <!-- Section 1: Kindle & Sender Emails -->
+          <div class="card">
+            <h2 class="card-title">1. Email Addresses</h2>
+            <div class="form-group">
+              <label for="kindle-email" class="label">
+                Kindle Email Address <span class="required">*</span>
+              </label>
+              <input 
+                type="email" 
+                id="kindle-email" 
+                name="kindleEmail" 
+                class="input" 
+                placeholder="yourname@kindle.com" 
+                required 
+              />
+              <span class="help-text">
+                Find this in your Amazon account under <strong>Content &amp; Devices &gt; Preferences &gt; Personal Document Settings</strong>.
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label for="sender-email" class="label">
+                Approved Sender Email Address <span class="required">*</span>
+              </label>
+              <input 
+                type="email" 
+                id="sender-email" 
+                name="senderEmail" 
+                class="input" 
+                placeholder="you@yourdomain.com" 
+                required 
+              />
+              <span class="help-text">
+                This email <strong>must</strong> be added to your Amazon Approved Personal Document E-mail List.
+              </span>
+            </div>
+          </div>
+
+          <!-- Section 2: Email Provider -->
+          <div class="card">
+            <h2 class="card-title">2. Delivery Provider</h2>
+            <div class="form-group">
+              <label for="provider-select" class="label">Choose Provider</label>
+              <select id="provider-select" name="provider" class="select">
+                <option value="resend">Resend (Recommended - Free &amp; Fast)</option>
+                <option value="sendgrid">SendGrid API</option>
+                <option value="brevo">Brevo / Sendinblue (Free 300/day)</option>
+                <option value="mailgun">Mailgun API</option>
+                <option value="webhook">Custom Homelab Webhook / Relay</option>
+              </select>
+            </div>
+
+            <!-- Provider Specific Fields -->
+            <div id="fields-api-key" class="form-group">
+              <label for="api-key" class="label">
+                <span id="label-api-key">API Key</span> <span class="required">*</span>
+              </label>
+              <input 
+                type="password" 
+                id="api-key" 
+                name="apiKey" 
+                class="input" 
+                placeholder="re_xxxxxxxxxxxx" 
+              />
+              <span id="help-api-key" class="help-text">Your API key for this email service.</span>
+            </div>
+
+            <div id="fields-mailgun" class="provider-fields hidden">
+              <div class="form-group">
+                <label for="mailgun-domain" class="label">Mailgun Domain <span class="required">*</span></label>
+                <input type="text" id="mailgun-domain" name="mailgunDomain" class="input" placeholder="mg.yourdomain.com" />
+              </div>
+              <div class="form-group">
+                <label for="mailgun-region" class="label">Mailgun Region</label>
+                <select id="mailgun-region" name="mailgunRegion" class="select">
+                  <option value="us">US (api.mailgun.net)</option>
+                  <option value="eu">EU (api.eu.mailgun.net)</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="fields-webhook" class="provider-fields hidden">
+              <div class="form-group">
+                <label for="webhook-url" class="label">Webhook Relay URL <span class="required">*</span></label>
+                <input type="url" id="webhook-url" name="webhookUrl" class="input" placeholder="http://localhost:3080/send-kindle" />
+                <span class="help-text">Endpoint receiving JSON payload: <code>{ to, from, subject, filename, epubBase64 }</code></span>
+              </div>
+              <div class="form-group">
+                <label for="webhook-token" class="label">Auth Token / Secret (Optional)</label>
+                <input type="password" id="webhook-token" name="webhookToken" class="input" placeholder="Optional bearer/API token" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Actions & Testing -->
+          <div class="card card-actions">
+            <div class="actions-wrapper">
+              <button type="submit" id="btn-save" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span>Save Settings</span>
+              </button>
+
+              <button type="button" id="btn-test" class="btn btn-secondary">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                <span>Send Test Ebook</span>
+              </button>
+            </div>
+
+            <!-- Status Alert -->
+            <div id="status-box" class="status-box hidden"></div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Instructions & Sidebar Column -->
+      <div class="info-column">
+        <div class="card info-card">
+          <h2 class="card-title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Amazon Kindle Setup Guide
+          </h2>
+          <ol class="steps-list">
+            <li>
+              <strong>Find your Send-to-Kindle Email:</strong>
+              <p>Go to <a href="https://www.amazon.com/hz/mycd/myx#/home/settings/payment" target="_blank" rel="noopener">Amazon Manage Your Content &amp; Devices</a> &gt; <strong>Preferences</strong> tab &gt; scroll down to <strong>Personal Document Settings</strong>.</p>
+            </li>
+            <li>
+              <strong>Authorize your Sender Email:</strong>
+              <p>In the same <em>Personal Document Settings</em> section, scroll down to <strong>Approved Personal Document E-mail List</strong> and click <strong>Add a new approved e-mail address</strong>.</p>
+              <p class="tip">Add the exact email address you set as your <em>Approved Sender Email</em>.</p>
+            </li>
+            <li>
+              <strong>Choose your Email Provider:</strong>
+              <p>We recommend <a href="https://resend.com" target="_blank" rel="noopener">Resend.com</a> (free 3,000 emails/month, easy API key), SendGrid, Brevo, or your own self-hosted homelab relay.</p>
+            </li>
+          </ol>
+        </div>
+
+        <div class="card info-card">
+          <h2 class="card-title">How it Works</h2>
+          <ul class="feature-list">
+            <li><strong>Reader Mode Engine:</strong> Extracts clean article headlines, byline, body, and images while stripping ads and popups.</li>
+            <li><strong>EPUB 3 Standard:</strong> Compiles a properly formatted ebook with navigation, metadata, and e-ink friendly styles.</li>
+            <li><strong>Direct Cloud Delivery:</strong> Dispatches directly to Amazon's Whispernet service so it appears in your Kindle library within seconds.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../lib/jszip.min.js"></script>
+  <script src="../lib/epub-generator.js"></script>
+  <script src="../lib/email-service.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

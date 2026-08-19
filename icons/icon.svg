@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="kindleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+    <linearGradient id="einkScreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- Kindle Reader Frame -->
+  <rect x="18" y="10" width="92" height="108" rx="14" fill="url(#kindleGrad)" filter="url(#dropShadow)" />
+  
+  <!-- E-Ink Screen -->
+  <rect x="28" y="22" width="72" height="84" rx="6" fill="url(#einkScreen)" />
+
+  <!-- Ebook Article Typography Lines -->
+  <!-- Header / Title -->
+  <rect x="36" y="32" width="56" height="6" rx="2" fill="#0f172a" />
+  <rect x="36" y="42" width="38" height="3" rx="1.5" fill="#64748b" />
+
+  <!-- Divider -->
+  <line x1="36" y1="50" x2="92" y2="50" stroke="#cbd5e1" stroke-width="1" />
+
+  <!-- Body Content Lines -->
+  <rect x="36" y="56" width="56" height="3" rx="1.5" fill="#334155" />
+  <rect x="36" y="63" width="56" height="3" rx="1.5" fill="#334155" />
+  <rect x="36" y="70" width="48" height="3" rx="1.5" fill="#334155" />
+  <rect x="36" y="77" width="56" height="3" rx="1.5" fill="#334155" />
+  <rect x="36" y="84" width="40" height="3" rx="1.5" fill="#334155" />
+
+  <!-- Send Paper Airplane Badge -->
+  <circle cx="96" cy="98" r="18" fill="#f59e0b" filter="url(#dropShadow)" />
+  <path d="M91 92 L103 98 L91 104 L93 99 L98 98 L93 97 Z" fill="#ffffff" />
+</svg>

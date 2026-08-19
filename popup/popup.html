@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Send to Kindle</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/>
+        </svg>
+        <span class="brand-title">Web to Kindle</span>
+      </div>
+      <div class="header-actions">
+        <button id="btn-settings" class="icon-btn" title="Settings">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Config Warning Banner -->
+    <div id="unconfigured-banner" class="banner banner-warning hidden">
+      <div class="banner-content">
+        <span class="banner-title">Setup Required</span>
+        <p class="banner-text">Configure your Kindle email and provider in settings to enable 1-click delivery.</p>
+      </div>
+      <button id="btn-open-config" class="btn btn-sm btn-outline">Configure</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Loading State -->
+      <div id="state-loading" class="state-view">
+        <div class="spinner"></div>
+        <p class="state-text">Extracting reader content...</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="state-error" class="state-view hidden">
+        <div class="status-icon icon-error">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+        <h3 class="state-title">Extraction Error</h3>
+        <p id="error-message" class="state-text">Could not parse this web page.</p>
+        <button id="btn-retry" class="btn btn-secondary btn-sm">Try Again</button>
+      </div>
+
+      <!-- Loaded / Ready State -->
+      <div id="state-ready" class="state-view hidden">
+        <div class="article-card">
+          <div class="article-header">
+            <input type="text" id="article-title" class="editable-title" placeholder="Article Title" />
+          </div>
+          
+          <div class="article-meta">
+            <span class="badge" id="meta-source">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+              </svg>
+              <span id="txt-source">example.com</span>
+            </span>
+            <span class="badge" id="meta-readtime">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span id="txt-readtime">4 min read</span>
+            </span>
+            <span class="badge" id="meta-words">
+              <span id="txt-words">850 words</span>
+            </span>
+          </div>
+
+          <div class="author-row" id="author-container">
+            <label for="article-author" class="field-label">Author:</label>
+            <input type="text" id="article-author" class="editable-field" placeholder="Author name (optional)" />
+          </div>
+
+          <div class="destination-row">
+            <span class="dest-label">Delivering to:</span>
+            <span id="dest-email" class="dest-value">kindle@kindle.com</span>
+          </div>
+
+          <!-- Preview Accordion -->
+          <div class="preview-accordion">
+            <button id="btn-toggle-preview" class="preview-toggle" aria-expanded="false">
+              <span>Reader Mode Preview</span>
+              <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div id="preview-content" class="preview-panel hidden">
+              <div id="preview-body" class="preview-body"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Status Feedback -->
+        <div id="action-status" class="action-status hidden">
+          <div id="status-spinner" class="spinner-sm hidden"></div>
+          <div id="status-icon" class="status-indicator"></div>
+          <span id="status-text" class="status-msg">Sending to Kindle...</span>
+        </div>
+
+        <!-- Primary Action Buttons -->
+        <div class="button-group">
+          <button id="btn-send-kindle" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            <span>Send to Kindle</span>
+          </button>
+          
+          <button id="btn-download-epub" class="btn btn-secondary" title="Download EPUB to computer">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>EPUB</span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-links">
+        <span class="footer-format">Format: EPUB 3.0 (Kindle)</span>
+        <a href="#" id="link-options">Options &amp; Help</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../lib/jszip.min.js"></script>
+  <script src="../lib/readability.js"></script>
+  <script src="../lib/epub-generator.js"></script>
+  <script src="../lib/email-service.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

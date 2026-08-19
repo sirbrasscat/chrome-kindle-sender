@@ -1,0 +1,16 @@
+services:
+  kindle-relay:
+    build: .
+    container_name: kindle-relay
+    restart: unless-stopped
+    ports:
+      - "3080:3080"
+    environment:
+      - PORT=3080
+      - SMTP_HOST=smtp.example.com
+      - SMTP_PORT=587
+      - SMTP_SECURE=false
+      - SMTP_USER=your-smtp-user@example.com
+      - SMTP_PASS=your-smtp-password
+      - DEFAULT_SENDER=approved-kindle-sender@example.com
+      - RELAY_AUTH_TOKEN=secret-token-123
