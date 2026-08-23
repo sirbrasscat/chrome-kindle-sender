@@ -36,6 +36,19 @@
   "host_permissions": [
     "<all_urls>"
   ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lib/pdf.worker.min.js",
+        "lib/pdf.min.js",
+        "lib/jszip.min.js",
+        "lib/readability.js",
+        "lib/book-crawler.js",
+        "content/extractor.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "commands": {
     "send-to-kindle": {
       "suggested_key": {
