@@ -312,8 +312,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentArticle = response.article;
       renderArticle(currentArticle);
 
-      // Check for book chapters
+      // Check for book chapters on current page
       detectedChapters = currentArticle.chapters || [];
+
+      // If no chapters found on current page, check if parent index contains a Table of Contents (e.g. user is on chap01.html)
+      if (detectedChapters.length <= 1) {
+        try {
+          const currentUrl = new URL(currentArticle.url);
+          const parentDirUrl = new URL('.', currentUrl.href).href;
+          const indexUrl = new URL('index.html', parentDirUrl).href;
+
+          if (indexUrl !== currentArticle.url) {
+            const indexResp = await fetch(indexUrl, { headers: { 'Accept': 'text/html' } });
+            if (indexResp.ok) {
+              const indexHtml = await indexResp.text();
+              const parser = new DOMParser();
+              const indexDoc = parser.parseFromString(indexHtml, 'text/html');
+              const parentChapters = BookCrawler.discoverChapters(indexDoc, indexUrl);
+              if (parentChapters && parentChapters.length > 1) {
+                detectedChapters = parentChapters;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Could not auto-fetch parent TOC:', e);
+        }
+      }
+
       if (detectedChapters.length > 1) {
         setupBookMode(currentArticle, detectedChapters);
       } else {
