@@ -814,6 +814,54 @@ body {
   color: var(--text-muted);
 }
 
+/* PDF Mode Styles */
+.tab-badge-accent {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.pdf-drop-zone {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px 14px;
+  text-align: center;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 10px;
+}
+
+.pdf-drop-zone:hover, .pdf-drop-zone.drag-over {
+  border-color: var(--primary-color);
+  background: var(--info-bg);
+}
+
+.drop-icon {
+  color: var(--primary-color);
+  margin-bottom: 6px;
+}
+
+.drop-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.drop-link {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.drop-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.pdf-action-buttons {
+  margin-top: 10px;
+}
+
 /* Footer */
 .footer {
   margin-top: auto;

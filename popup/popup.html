@@ -45,6 +45,15 @@
         <span>Book</span>
         <span id="badge-book-chapters" class="tab-badge hidden">0</span>
       </button>
+      <button id="tab-pdf" class="tab-btn">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <path d="M9 13v-2h3"></path>
+        </svg>
+        <span>PDF</span>
+        <span id="badge-pdf-detected" class="tab-badge tab-badge-accent hidden">1</span>
+      </button>
       <button id="tab-history" class="tab-btn">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"></circle>
@@ -71,6 +80,15 @@
         <p class="banner-text" id="txt-detected-summary">Found table of contents with chapters.</p>
       </div>
       <button id="btn-switch-book" class="btn btn-sm btn-primary">Open Book Mode</button>
+    </div>
+
+    <!-- PDF Detected Callout Banner -->
+    <div id="pdf-detected-banner" class="banner banner-info hidden">
+      <div class="banner-content">
+        <span class="banner-title">📑 PDF Document Detected!</span>
+        <p class="banner-text" id="txt-pdf-detected-summary">PDF file ready for Kindle or EPUB conversion.</p>
+      </div>
+      <button id="btn-switch-pdf" class="btn btn-sm btn-primary">Open PDF Mode</button>
     </div>
 
     <!-- Main Content Area -->
@@ -258,7 +276,95 @@
         </div>
       </div>
 
-      <!-- VIEW 3: History View -->
+      <!-- VIEW 3: PDF Document Mode View -->
+      <div id="view-pdf" class="view-panel hidden">
+        <!-- PDF File Drop Zone -->
+        <div id="pdf-drop-zone" class="pdf-drop-zone">
+          <input type="file" id="input-pdf-file" accept=".pdf" class="hidden" />
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" class="drop-icon">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <path d="M12 18v-6"></path>
+            <path d="M9 15l3-3 3 3"></path>
+          </svg>
+          <p class="drop-title" id="txt-drop-title">Drop a PDF here, or <span class="drop-link">browse</span></p>
+          <p class="drop-sub" id="txt-drop-sub">Send original PDF to Kindle or convert to reflowable EPUB</p>
+        </div>
+
+        <!-- Loaded PDF Info Card -->
+        <div id="pdf-info-card" class="article-card hidden">
+          <div class="article-header">
+            <input type="text" id="pdf-title" class="editable-title" placeholder="PDF Document Title" />
+          </div>
+
+          <div class="author-row">
+            <label for="pdf-author" class="field-label">Author:</label>
+            <input type="text" id="pdf-author" class="editable-field" placeholder="Author name (optional)" />
+          </div>
+
+          <div class="article-meta">
+            <span class="badge" id="badge-pdf-pages">0 Pages</span>
+            <span class="badge" id="badge-pdf-size">0.0 MB</span>
+            <span class="badge badge-accent" id="badge-pdf-status">PDF Ready</span>
+          </div>
+
+          <!-- Size Warning Notice if > 25MB -->
+          <div id="pdf-size-warning" class="banner banner-warning hidden" style="margin-top: 8px;">
+            <p class="banner-text">⚠️ <strong>File size is over 25MB.</strong> Email delivery might be rejected by providers. <strong>Convert to EPUB</strong> is recommended (shrinks text to &lt;2MB).</p>
+          </div>
+        </div>
+
+        <!-- PDF Parsing Progress Bar -->
+        <div id="pdf-progress-box" class="progress-box hidden">
+          <div class="progress-info">
+            <span id="txt-pdf-progress-label">Extracting text &amp; reflowing pages...</span>
+            <span id="txt-pdf-progress-percent">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div id="pdf-progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- PDF Status Indicator -->
+        <div id="pdf-action-status" class="action-status hidden">
+          <div id="pdf-status-spinner" class="spinner-sm hidden"></div>
+          <span id="pdf-status-text" class="status-msg"></span>
+        </div>
+
+        <!-- PDF Actions -->
+        <div id="pdf-actions" class="pdf-action-buttons hidden">
+          <div class="button-group">
+            <button id="btn-send-raw-pdf" class="btn btn-primary" title="Send exact original PDF to Kindle">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+              <span>Send PDF</span>
+            </button>
+            
+            <button id="btn-convert-send-epub" class="btn btn-primary" title="Extract and reflow text to Kindle EPUB with adjustable Bookerly font size">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              <span>Convert &amp; Send EPUB</span>
+            </button>
+          </div>
+
+          <div class="button-group" style="margin-top: 6px;">
+            <button id="btn-download-pdf-epub" class="btn btn-secondary" style="width: 100%;" title="Download converted reflowable EPUB">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download Reflowed EPUB</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 4: History View -->
       <div id="view-history" class="view-panel hidden">
         <div class="history-controls">
           <input type="text" id="input-history-search" class="search-input" placeholder="Search history..." />
@@ -282,7 +388,7 @@
     <!-- Footer -->
     <footer class="footer">
       <div class="footer-links">
-        <span class="footer-format">Format: EPUB 3.0 (Kindle)</span>
+        <span class="footer-format">Formats: EPUB 3.0 &amp; PDF (Kindle)</span>
         <a href="#" id="link-options">Options &amp; Help</a>
       </div>
     </footer>
@@ -295,6 +401,8 @@
   <script src="../lib/epub-generator.js"></script>
   <script src="../lib/email-service.js"></script>
   <script src="../lib/history-service.js"></script>
+  <script src="../lib/pdf.min.js"></script>
+  <script src="../lib/pdf-processor.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

@@ -1,18 +1,22 @@
 /**
  * Web to Kindle Extension - Popup Controller
- * Supports Single Article, Multi-Chapter Online Book conversion, and Action History tracking.
+ * Supports Single Article, Multi-Chapter Online Book conversion, PDF Documents, and Action History tracking.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Navigation / Tabs
   const tabArticle = document.getElementById('tab-article');
   const tabBook = document.getElementById('tab-book');
+  const tabPdf = document.getElementById('tab-pdf');
   const tabHistory = document.getElementById('tab-history');
+
   const badgeBookChapters = document.getElementById('badge-book-chapters');
+  const badgePdfDetected = document.getElementById('badge-pdf-detected');
   const badgeHistoryCount = document.getElementById('badge-history-count');
 
   const viewArticle = document.getElementById('view-article');
   const viewBook = document.getElementById('view-book');
+  const viewPdf = document.getElementById('view-pdf');
   const viewHistory = document.getElementById('view-history');
 
   // Banners & Views
@@ -20,8 +24,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stateError = document.getElementById('state-error');
   const unconfiguredBanner = document.getElementById('unconfigured-banner');
   const bookDetectedBanner = document.getElementById('book-detected-banner');
+  const pdfDetectedBanner = document.getElementById('pdf-detected-banner');
   const txtDetectedSummary = document.getElementById('txt-detected-summary');
+  const txtPdfDetectedSummary = document.getElementById('txt-pdf-detected-summary');
   const btnSwitchBook = document.getElementById('btn-switch-book');
+  const btnSwitchPdf = document.getElementById('btn-switch-pdf');
   const errorMessage = document.getElementById('error-message');
 
   // Single Article View Elements
@@ -62,6 +69,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnSendBookKindle = document.getElementById('btn-send-book-kindle');
   const btnDownloadBookEpub = document.getElementById('btn-download-book-epub');
 
+  // PDF View Elements
+  const pdfDropZone = document.getElementById('pdf-drop-zone');
+  const inputPdfFile = document.getElementById('input-pdf-file');
+  const pdfInfoCard = document.getElementById('pdf-info-card');
+  const pdfTitleInput = document.getElementById('pdf-title');
+  const pdfAuthorInput = document.getElementById('pdf-author');
+  const badgePdfPages = document.getElementById('badge-pdf-pages');
+  const badgePdfSize = document.getElementById('badge-pdf-size');
+  const badgePdfStatus = document.getElementById('badge-pdf-status');
+  const pdfSizeWarning = document.getElementById('pdf-size-warning');
+  const pdfProgressBox = document.getElementById('pdf-progress-box');
+  const txtPdfProgressLabel = document.getElementById('txt-pdf-progress-label');
+  const txtPdfProgressPercent = document.getElementById('txt-pdf-progress-percent');
+  const pdfProgressBarFill = document.getElementById('pdf-progress-bar-fill');
+  const pdfActionStatus = document.getElementById('pdf-action-status');
+  const pdfStatusSpinner = document.getElementById('pdf-status-spinner');
+  const pdfStatusText = document.getElementById('pdf-status-text');
+  const pdfActions = document.getElementById('pdf-actions');
+  const btnSendRawPdf = document.getElementById('btn-send-raw-pdf');
+  const btnConvertSendEpub = document.getElementById('btn-convert-send-epub');
+  const btnDownloadPdfEpub = document.getElementById('btn-download-pdf-epub');
+  const txtDropTitle = document.getElementById('txt-drop-title');
+
   // History View Elements
   const inputHistorySearch = document.getElementById('input-history-search');
   const btnClearHistory = document.getElementById('btn-clear-history');
@@ -80,8 +110,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let detectedChapters = [];
   let crawledChaptersData = null;
   let activeAbortController = null;
+  let loadedPdfData = null; // { file, uint8Array, base64, processed }
   let isArticleSent = false;
   let isBookSent = false;
+  let isPdfSent = false;
   let cachedHistory = [];
 
   const defaultSendButtonHtml = `
@@ -103,10 +135,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   function switchTab(mode) {
     tabArticle.classList.toggle('active', mode === 'article');
     tabBook.classList.toggle('active', mode === 'book');
+    tabPdf.classList.toggle('active', mode === 'pdf');
     tabHistory.classList.toggle('active', mode === 'history');
 
     viewArticle.classList.toggle('hidden', mode !== 'article');
     viewBook.classList.toggle('hidden', mode !== 'book');
+    viewPdf.classList.toggle('hidden', mode !== 'pdf');
     viewHistory.classList.toggle('hidden', mode !== 'history');
 
     if (mode === 'history') {
@@ -116,8 +150,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   tabArticle.addEventListener('click', () => switchTab('article'));
   tabBook.addEventListener('click', () => switchTab('book'));
+  tabPdf.addEventListener('click', () => switchTab('pdf'));
   tabHistory.addEventListener('click', () => switchTab('history'));
   btnSwitchBook.addEventListener('click', () => switchTab('book'));
+  btnSwitchPdf.addEventListener('click', () => switchTab('pdf'));
 
   // Button Sent States
   function setArticleSentState(sent) {
@@ -126,12 +162,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       btnSendKindle.classList.add('btn-sent');
       btnSendKindle.disabled = true;
       btnSendKindle.innerHTML = sentButtonHtml;
-      btnSendKindle.title = 'This article has already been sent to your Kindle.';
     } else {
       btnSendKindle.classList.remove('btn-sent');
       btnSendKindle.disabled = false;
       btnSendKindle.innerHTML = defaultSendButtonHtml;
-      btnSendKindle.title = '';
     }
   }
 
@@ -141,20 +175,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       btnSendBookKindle.classList.add('btn-sent');
       btnSendBookKindle.disabled = true;
       btnSendBookKindle.innerHTML = sentButtonHtml;
-      btnSendBookKindle.title = 'This book has already been sent to your Kindle.';
     } else {
       btnSendBookKindle.classList.remove('btn-sent');
       btnSendBookKindle.disabled = false;
       btnSendBookKindle.innerHTML = defaultSendButtonHtml;
-      btnSendBookKindle.title = '';
     }
   }
 
-  // Re-enable send buttons when inputs change
-  titleInput.addEventListener('input', () => { if (isArticleSent) setArticleSentState(false); });
-  authorInput.addEventListener('input', () => { if (isArticleSent) setArticleSentState(false); });
-  bookTitleInput.addEventListener('input', () => { if (isBookSent) setBookSentState(false); });
-  bookAuthorInput.addEventListener('input', () => { if (isBookSent) setBookSentState(false); });
+  function setPdfSentState(sent, buttonEl) {
+    isPdfSent = sent;
+    if (buttonEl) {
+      if (sent) {
+        buttonEl.classList.add('btn-sent');
+        buttonEl.disabled = true;
+        buttonEl.innerHTML = sentButtonHtml;
+      } else {
+        buttonEl.classList.remove('btn-sent');
+        buttonEl.disabled = false;
+      }
+    }
+  }
 
   // Open Settings
   const openSettings = () => {
@@ -231,9 +271,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         `<span class="history-badge history-badge-sent">📤 Sent</span>` :
         `<span class="history-badge history-badge-downloaded">💾 Saved</span>`;
 
-      const typeBadge = item.type === 'book' ?
-        `<span class="history-badge history-badge-type">📚 Book (${item.chaptersCount || 1} ch)</span>` :
-        `<span class="history-badge history-badge-type">📄 Article</span>`;
+      let typeBadge = `<span class="history-badge history-badge-type">📄 Article</span>`;
+      if (item.type === 'book') {
+        typeBadge = `<span class="history-badge history-badge-type">📚 Book (${item.chaptersCount || 1} ch)</span>`;
+      } else if (item.type === 'pdf') {
+        typeBadge = `<span class="history-badge history-badge-type">📑 PDF</span>`;
+      }
 
       const formattedTime = HistoryService.formatTime(item.timestamp);
       const wordsText = item.wordCount ? `${(item.wordCount).toLocaleString()} words` : '';
@@ -255,7 +298,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       `;
 
-      // Delete single item handler
       el.querySelector('.btn-delete-item').addEventListener('click', async (e) => {
         e.stopPropagation();
         await HistoryService.deleteEntry(item.id);
@@ -267,7 +309,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   inputHistorySearch.addEventListener('input', () => renderHistory());
-
   btnClearHistory.addEventListener('click', async () => {
     if (confirm('Clear all action history?')) {
       await HistoryService.clearHistory();
@@ -281,6 +322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     stateError.classList.add('hidden');
     viewArticle.classList.add('hidden');
     viewBook.classList.add('hidden');
+    viewPdf.classList.add('hidden');
     viewHistory.classList.add('hidden');
 
     try {
@@ -289,11 +331,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         throw new Error('No active browser tab found.');
       }
 
+      // Check if the current tab is directly opening a PDF file
+      if (tab.url && (tab.url.toLowerCase().endsWith('.pdf') || tab.url.includes('.pdf?'))) {
+        handlePdfUrlDetected(tab.url, tab.title);
+        stateLoading.classList.add('hidden');
+        switchTab('pdf');
+        return;
+      }
+
       if (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
         throw new Error('Cannot extract reader content from browser internal pages.');
       }
 
-      // Inject Readability, BookCrawler and extractor script into tab
+      // Inject scripts into tab
       try {
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
@@ -315,7 +365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Check for book chapters on current page
       detectedChapters = currentArticle.chapters || [];
 
-      // If no chapters found on current page, check if parent index contains a Table of Contents (e.g. user is on chap01.html)
+      // If no chapters found on current page, check if parent index contains a Table of Contents
       if (detectedChapters.length <= 1) {
         try {
           const currentUrl = new URL(currentArticle.url);
@@ -374,7 +424,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     txtDetectedSummary.textContent = `Found Table of Contents with ${chapters.length} chapters.`;
     bookDetectedBanner.classList.remove('hidden');
 
-    // Default book metadata
     let cleanBookTitle = article.siteName || article.title;
     if (article.title.includes(' — ') || article.title.includes(' - ')) {
       cleanBookTitle = article.title.split(/ [—-]/)[0].trim();
@@ -384,7 +433,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     badgeChaptersCount.textContent = `${chapters.length} Chapters`;
     badgeBookStats.textContent = 'Ready to compile';
 
-    // Render Chapters Checklist
     chaptersListContainer.innerHTML = '';
     chapters.forEach(chap => {
       const item = document.createElement('label');
@@ -399,14 +447,277 @@ document.addEventListener('DOMContentLoaded', async () => {
       chaptersListContainer.appendChild(item);
     });
 
-    // Reset book states
     crawledChaptersData = null;
     bookInitialActions.classList.remove('hidden');
     bookCompletedActions.classList.add('hidden');
     setBookSentState(false);
   }
 
-  // Select / Deselect All Chapters
+  // PDF Handling Logic
+  function handlePdfUrlDetected(pdfUrl, defaultTitle) {
+    badgePdfDetected.classList.remove('hidden');
+    txtPdfDetectedSummary.textContent = `Active page is a PDF: ${defaultTitle || 'PDF Document'}`;
+    pdfDetectedBanner.classList.remove('hidden');
+
+    loadPdfFromSource(pdfUrl, defaultTitle);
+  }
+
+  // PDF Dropzone and File Picker
+  pdfDropZone.addEventListener('click', () => inputPdfFile.click());
+  pdfDropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    pdfDropZone.classList.add('drag-over');
+  });
+  pdfDropZone.addEventListener('dragleave', () => pdfDropZone.classList.remove('drag-over'));
+  pdfDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    pdfDropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+        loadPdfFromSource(file, file.name.replace(/\.pdf$/i, ''));
+      } else {
+        setPdfStatus('error', 'Please drop a valid .pdf file.');
+      }
+    }
+  });
+
+  inputPdfFile.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      loadPdfFromSource(file, file.name.replace(/\.pdf$/i, ''));
+    }
+  });
+
+  async function loadPdfFromSource(source, fallbackTitle) {
+    setPdfStatus('loading', 'Loading PDF document...');
+    pdfProgressBox.classList.remove('hidden');
+    txtPdfProgressLabel.textContent = 'Reading PDF binary data...';
+    txtPdfProgressPercent.textContent = '0%';
+    pdfProgressBarFill.style.width = '0%';
+
+    try {
+      const result = await PdfProcessor.processPdf(source, {
+        onProgress: (p) => {
+          txtPdfProgressLabel.textContent = `Extracting page ${p.current} of ${p.total}...`;
+          txtPdfProgressPercent.textContent = `${p.percent}%`;
+          pdfProgressBarFill.style.width = `${p.percent}%`;
+        }
+      });
+
+      loadedPdfData = {
+        source,
+        result
+      };
+
+      // Display metadata in info card
+      pdfTitleInput.value = result.metadata.title || fallbackTitle || 'PDF Document';
+      pdfAuthorInput.value = result.metadata.author || '';
+      badgePdfPages.textContent = `${result.pageCount} Pages`;
+      badgePdfSize.textContent = `${result.metadata.sizeMB} MB`;
+      badgePdfStatus.textContent = `${(result.totalWords).toLocaleString()} words`;
+
+      // Check size warning (> 25MB)
+      const isOver25MB = (result.sizeBytes / (1024 * 1024)) > 25;
+      pdfSizeWarning.classList.toggle('hidden', !isOver25MB);
+
+      pdfInfoCard.classList.remove('hidden');
+      pdfActions.classList.remove('hidden');
+      pdfProgressBox.classList.add('hidden');
+      setPdfStatus('success', '✓ PDF loaded and parsed successfully!');
+
+    } catch (err) {
+      console.error('PDF parsing error:', err);
+      pdfProgressBox.classList.add('hidden');
+      setPdfStatus('error', `Failed to load PDF: ${err.message}`);
+    }
+  }
+
+  function setPdfStatus(type, message) {
+    pdfActionStatus.className = 'action-status';
+    pdfActionStatus.classList.remove('hidden');
+    if (type === 'loading') {
+      pdfActionStatus.classList.add('status-loading');
+      pdfStatusSpinner.classList.remove('hidden');
+    } else if (type === 'success') {
+      pdfActionStatus.classList.add('status-success');
+      pdfStatusSpinner.classList.add('hidden');
+    } else if (type === 'error') {
+      pdfActionStatus.classList.add('status-error');
+      pdfStatusSpinner.classList.add('hidden');
+    }
+    pdfStatusText.textContent = message;
+  }
+
+  // PDF Action 1: Send Raw PDF directly to Kindle
+  btnSendRawPdf.addEventListener('click', async () => {
+    if (!loadedPdfData || !loadedPdfData.result) return;
+
+    try {
+      await loadSettings();
+      if (!currentSettings.kindleEmail) {
+        setPdfStatus('error', 'Please configure your Kindle email in Settings first.');
+        openSettings();
+        return;
+      }
+
+      btnSendRawPdf.disabled = true;
+      btnConvertSendEpub.disabled = true;
+      setPdfStatus('loading', `Sending original PDF to ${currentSettings.kindleEmail}...`);
+
+      const cleanTitle = (pdfTitleInput.value.trim() || loadedPdfData.result.metadata.title || 'document').replace(/[/\\?%*:|"<>]/g, '_');
+      const filename = `${cleanTitle}.pdf`;
+
+      await EmailService.sendFile({
+        fileBase64: loadedPdfData.result.rawPdfBase64,
+        filename: filename,
+        title: pdfTitleInput.value.trim() || loadedPdfData.result.metadata.title,
+        author: pdfAuthorInput.value.trim() || loadedPdfData.result.metadata.author,
+        url: typeof loadedPdfData.source === 'string' ? loadedPdfData.source : ''
+      });
+
+      // Save to History
+      await HistoryService.addEntry({
+        type: 'pdf',
+        action: 'sent',
+        title: pdfTitleInput.value.trim() || loadedPdfData.result.metadata.title,
+        author: pdfAuthorInput.value.trim() || loadedPdfData.result.metadata.author,
+        url: typeof loadedPdfData.source === 'string' ? loadedPdfData.source : '',
+        siteName: 'PDF Document',
+        filename: filename,
+        wordCount: loadedPdfData.result.totalWords,
+        recipient: currentSettings.kindleEmail
+      });
+      loadHistoryBadge();
+
+      setPdfStatus('success', `✓ Original PDF sent to Kindle! (${currentSettings.kindleEmail})`);
+      setPdfSentState(true, btnSendRawPdf);
+
+    } catch (err) {
+      console.error('Send PDF error:', err);
+      setPdfStatus('error', err.message || 'Failed to send PDF to Kindle.');
+    } finally {
+      btnSendRawPdf.disabled = isPdfSent;
+      btnConvertSendEpub.disabled = false;
+    }
+  });
+
+  // PDF Action 2: Convert & Send Reflowable EPUB to Kindle
+  btnConvertSendEpub.addEventListener('click', async () => {
+    if (!loadedPdfData || !loadedPdfData.result) return;
+
+    try {
+      await loadSettings();
+      if (!currentSettings.kindleEmail) {
+        setPdfStatus('error', 'Please configure your Kindle email in Settings first.');
+        openSettings();
+        return;
+      }
+
+      btnConvertSendEpub.disabled = true;
+      btnSendRawPdf.disabled = true;
+      setPdfStatus('loading', 'Generating reflowable EPUB ebook...');
+
+      const generator = new EpubGenerator({
+        title: pdfTitleInput.value.trim() || loadedPdfData.result.metadata.title || 'PDF Ebook',
+        author: pdfAuthorInput.value.trim() || loadedPdfData.result.metadata.author || 'Author',
+        siteName: 'PDF Ebook',
+        publishedTime: new Date().toISOString(),
+        chapters: loadedPdfData.result.chapters
+      });
+
+      const epubBase64 = await generator.generateBase64();
+      const filename = generator.getSafeFilename();
+
+      setPdfStatus('loading', `Sending reflowed EPUB to ${currentSettings.kindleEmail}...`);
+
+      await EmailService.sendEpub({
+        epubBase64: epubBase64,
+        filename: filename,
+        title: pdfTitleInput.value.trim() || loadedPdfData.result.metadata.title,
+        author: pdfAuthorInput.value.trim() || loadedPdfData.result.metadata.author,
+        url: typeof loadedPdfData.source === 'string' ? loadedPdfData.source : ''
+      });
+
+      // Save to History
+      await HistoryService.addEntry({
+        type: 'book',
+        action: 'sent',
+        title: pdfTitleInput.value.trim() || loadedPdfData.result.metadata.title,
+        author: pdfAuthorInput.value.trim() || loadedPdfData.result.metadata.author,
+        url: typeof loadedPdfData.source === 'string' ? loadedPdfData.source : '',
+        siteName: 'PDF Document',
+        filename: filename,
+        chaptersCount: loadedPdfData.result.chapters.length,
+        wordCount: loadedPdfData.result.totalWords,
+        recipient: currentSettings.kindleEmail
+      });
+      loadHistoryBadge();
+
+      setPdfStatus('success', `✓ Reflowed EPUB sent to Kindle! (${currentSettings.kindleEmail})`);
+      setPdfSentState(true, btnConvertSendEpub);
+
+    } catch (err) {
+      console.error('Convert & send error:', err);
+      setPdfStatus('error', err.message || 'Failed to convert and send EPUB.');
+    } finally {
+      btnConvertSendEpub.disabled = isPdfSent;
+      btnSendRawPdf.disabled = false;
+    }
+  });
+
+  // PDF Action 3: Download Reflowed EPUB
+  btnDownloadPdfEpub.addEventListener('click', async () => {
+    if (!loadedPdfData || !loadedPdfData.result) return;
+
+    try {
+      btnDownloadPdfEpub.disabled = true;
+      setPdfStatus('loading', 'Packaging EPUB for download...');
+
+      const generator = new EpubGenerator({
+        title: pdfTitleInput.value.trim() || loadedPdfData.result.metadata.title || 'PDF Ebook',
+        author: pdfAuthorInput.value.trim() || loadedPdfData.result.metadata.author || 'Author',
+        siteName: 'PDF Ebook',
+        publishedTime: new Date().toISOString(),
+        chapters: loadedPdfData.result.chapters
+      });
+
+      const blob = await generator.generateBlob();
+      const filename = generator.getSafeFilename();
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+
+      // Save to History
+      await HistoryService.addEntry({
+        type: 'book',
+        action: 'downloaded',
+        title: pdfTitleInput.value.trim() || loadedPdfData.result.metadata.title,
+        author: pdfAuthorInput.value.trim() || loadedPdfData.result.metadata.author,
+        url: typeof loadedPdfData.source === 'string' ? loadedPdfData.source : '',
+        siteName: 'PDF Document',
+        filename: filename,
+        chaptersCount: loadedPdfData.result.chapters.length,
+        wordCount: loadedPdfData.result.totalWords
+      });
+      loadHistoryBadge();
+
+      setPdfStatus('success', `✓ Downloaded ${filename}`);
+    } catch (err) {
+      console.error('Download error:', err);
+      setPdfStatus('error', `Download failed: ${err.message}`);
+    } finally {
+      btnDownloadPdfEpub.disabled = false;
+    }
+  });
+
+  // Select / Deselect All Book Chapters
   btnSelectAll?.addEventListener('click', () => {
     chaptersListContainer.querySelectorAll('.chapter-checkbox').forEach(cb => { cb.checked = true; });
   });
@@ -480,7 +791,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
 
-      // Save to History
       await HistoryService.addEntry({
         type: 'article',
         action: 'downloaded',
@@ -542,7 +852,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         url: currentArticle.url
       });
 
-      // Save to History
       await HistoryService.addEntry({
         type: 'article',
         action: 'sent',
@@ -603,7 +912,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
 
-      // Calculate stats
       const totalWords = crawledChaptersData.reduce((sum, ch) => sum + (ch.wordCount || 0), 0);
       const estHours = (totalWords / 12000).toFixed(1);
 
@@ -623,7 +931,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Cancel Crawl
   btnCancelCrawl.addEventListener('click', () => {
     if (activeAbortController) {
       activeAbortController.abort();
@@ -661,7 +968,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const totalWords = crawledChaptersData.reduce((sum, ch) => sum + (ch.wordCount || 0), 0);
 
-      // Save to History
       await HistoryService.addEntry({
         type: 'book',
         action: 'downloaded',
@@ -724,7 +1030,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const totalWords = crawledChaptersData.reduce((sum, ch) => sum + (ch.wordCount || 0), 0);
 
-      // Save to History
       await HistoryService.addEntry({
         type: 'book',
         action: 'sent',
