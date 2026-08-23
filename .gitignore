@@ -9,6 +9,7 @@ package-lock.json
 
 # Local Test Artifacts
 *.epub
+*.zip
 *.log
 
 # OS & Editor Files
