@@ -34,6 +34,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let currentArticle = null;
   let currentSettings = null;
+  let isPageSent = false;
+
+  const defaultSendButtonHtml = `
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13"></line>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+    </svg>
+    <span>Send to Kindle</span>
+  `;
+
+  const sentButtonHtml = `
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+    <span>Sent to Kindle</span>
+  `;
+
+  function setButtonSentState(sent) {
+    isPageSent = sent;
+    if (sent) {
+      btnSendKindle.classList.add('btn-sent');
+      btnSendKindle.disabled = true;
+      btnSendKindle.innerHTML = sentButtonHtml;
+      btnSendKindle.title = 'This article has already been sent to your Kindle.';
+    } else {
+      btnSendKindle.classList.remove('btn-sent');
+      btnSendKindle.disabled = false;
+      btnSendKindle.innerHTML = defaultSendButtonHtml;
+      btnSendKindle.title = '';
+    }
+  }
+
+  // Re-enable send button if user modifies title or author
+  titleInput.addEventListener('input', () => {
+    if (isPageSent) setButtonSentState(false);
+  });
+  authorInput.addEventListener('input', () => {
+    if (isPageSent) setButtonSentState(false);
+  });
 
   // Navigation / Settings buttons
   const openSettings = () => {
@@ -126,6 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     txtReadtime.textContent = `${article.readingTimeMinutes || 1} min read`;
     txtWords.textContent = `${(article.wordCount || 0).toLocaleString()} words`;
     previewBody.innerHTML = article.content || '<p>No content preview available.</p>';
+    setButtonSentState(false);
   }
 
   function setStatus(type, message) {
@@ -198,7 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Handle Send to Kindle
   btnSendKindle.addEventListener('click', async () => {
-    if (!currentArticle) return;
+    if (!currentArticle || isPageSent) return;
 
     try {
       await loadSettings();
@@ -227,12 +267,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       setStatus('success', `Sent to Kindle! (${currentSettings.kindleEmail})`);
+      setButtonSentState(true);
 
     } catch (err) {
       console.error('Send error:', err);
       setStatus('error', err.message || 'Failed to send to Kindle.');
+      setButtonSentState(false);
     } finally {
-      btnSendKindle.disabled = false;
+      if (!isPageSent) {
+        btnSendKindle.disabled = false;
+      }
       btnDownloadEpub.disabled = false;
     }
   });

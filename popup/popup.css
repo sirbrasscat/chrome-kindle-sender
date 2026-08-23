@@ -428,6 +428,20 @@ body {
   background-color: var(--primary-hover);
 }
 
+.btn-primary.btn-sent,
+.btn-primary.btn-sent:disabled {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-muted) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+
+.btn-primary.btn-sent svg {
+  color: #16a34a;
+}
+
 .btn-secondary {
   background-color: var(--bg-tertiary);
   color: var(--text-primary);
