@@ -665,6 +665,155 @@ body {
   border-radius: var(--radius-sm);
 }
 
+/* History View */
+.tab-badge-muted {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.history-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 5px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background: var(--bg-primary);
+}
+
+.text-danger {
+  color: var(--error-text);
+}
+.text-danger:hover {
+  background: var(--error-bg);
+  border-color: var(--error-border);
+}
+
+.history-list {
+  max-height: 380px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 2px;
+}
+
+.history-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.15s ease;
+  position: relative;
+  text-align: left;
+}
+
+.history-item:hover {
+  border-color: var(--primary-color);
+  background: var(--bg-primary);
+}
+
+.history-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.history-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.history-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.history-badge-sent {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+}
+
+.history-badge-downloaded {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+}
+
+.history-badge-type {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.btn-delete-item {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 3px;
+}
+
+.btn-delete-item:hover {
+  color: var(--error-text);
+  background: var(--error-bg);
+}
+
+.history-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.history-title:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.history-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.state-empty {
+  padding: 40px 10px;
+  color: var(--text-muted);
+}
+
 /* Footer */
 .footer {
   margin-top: auto;

@@ -2,7 +2,7 @@
  * Web to Kindle - Background Service Worker
  */
 
-importScripts('../lib/jszip.min.js', '../lib/epub-generator.js', '../lib/email-service.js');
+importScripts('../lib/jszip.min.js', '../lib/epub-generator.js', '../lib/email-service.js', '../lib/history-service.js');
 
 // Setup Context Menus on Installation
 chrome.runtime.onInstalled.addListener(() => {
@@ -84,6 +84,19 @@ async function handleSendTabToKindle(tab) {
       title: article.title,
       author: article.byline,
       url: article.url
+    });
+
+    // Log to history
+    await HistoryService.addEntry({
+      type: 'article',
+      action: 'sent',
+      title: article.title,
+      author: article.byline,
+      url: article.url,
+      siteName: article.siteName,
+      filename: filename,
+      wordCount: article.wordCount || 0,
+      recipient: settings.kindleEmail
     });
 
     // Show success badge

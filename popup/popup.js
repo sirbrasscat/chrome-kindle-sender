@@ -1,15 +1,19 @@
 /**
  * Web to Kindle Extension - Popup Controller
- * Supports Single Article and Multi-Chapter Online Book conversion.
+ * Supports Single Article, Multi-Chapter Online Book conversion, and Action History tracking.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Navigation / Tabs
   const tabArticle = document.getElementById('tab-article');
   const tabBook = document.getElementById('tab-book');
+  const tabHistory = document.getElementById('tab-history');
   const badgeBookChapters = document.getElementById('badge-book-chapters');
+  const badgeHistoryCount = document.getElementById('badge-history-count');
+
   const viewArticle = document.getElementById('view-article');
   const viewBook = document.getElementById('view-book');
+  const viewHistory = document.getElementById('view-history');
 
   // Banners & Views
   const stateLoading = document.getElementById('state-loading');
@@ -58,6 +62,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnSendBookKindle = document.getElementById('btn-send-book-kindle');
   const btnDownloadBookEpub = document.getElementById('btn-download-book-epub');
 
+  // History View Elements
+  const inputHistorySearch = document.getElementById('input-history-search');
+  const btnClearHistory = document.getElementById('btn-clear-history');
+  const historyEmpty = document.getElementById('history-empty');
+  const historyItemsContainer = document.getElementById('history-items-container');
+
   // General Controls
   const btnSettings = document.getElementById('btn-settings');
   const btnOpenConfig = document.getElementById('btn-open-config');
@@ -72,6 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let activeAbortController = null;
   let isArticleSent = false;
   let isBookSent = false;
+  let cachedHistory = [];
 
   const defaultSendButtonHtml = `
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -90,22 +101,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Tab Switcher
   function switchTab(mode) {
-    if (mode === 'article') {
-      tabArticle.classList.add('active');
-      tabBook.classList.remove('active');
-      viewArticle.classList.remove('hidden');
-      viewBook.classList.add('hidden');
-    } else {
-      tabBook.classList.add('active');
-      tabArticle.classList.remove('active');
-      viewBook.classList.remove('hidden');
-      viewArticle.classList.add('hidden');
-      bookDetectedBanner.classList.add('hidden');
+    tabArticle.classList.toggle('active', mode === 'article');
+    tabBook.classList.toggle('active', mode === 'book');
+    tabHistory.classList.toggle('active', mode === 'history');
+
+    viewArticle.classList.toggle('hidden', mode !== 'article');
+    viewBook.classList.toggle('hidden', mode !== 'book');
+    viewHistory.classList.toggle('hidden', mode !== 'history');
+
+    if (mode === 'history') {
+      renderHistory();
     }
   }
 
   tabArticle.addEventListener('click', () => switchTab('article'));
   tabBook.addEventListener('click', () => switchTab('book'));
+  tabHistory.addEventListener('click', () => switchTab('history'));
   btnSwitchBook.addEventListener('click', () => switchTab('book'));
 
   // Button Sent States
@@ -180,12 +191,97 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // History Management & Rendering
+  async function loadHistoryBadge() {
+    cachedHistory = await HistoryService.getHistory();
+    if (cachedHistory.length > 0) {
+      badgeHistoryCount.textContent = cachedHistory.length;
+      badgeHistoryCount.classList.remove('hidden');
+    } else {
+      badgeHistoryCount.classList.add('hidden');
+    }
+  }
+
+  async function renderHistory() {
+    cachedHistory = await HistoryService.getHistory();
+    loadHistoryBadge();
+
+    const query = inputHistorySearch.value.trim().toLowerCase();
+    const filtered = query ? cachedHistory.filter(item => {
+      return (item.title && item.title.toLowerCase().includes(query)) ||
+             (item.author && item.author.toLowerCase().includes(query)) ||
+             (item.siteName && item.siteName.toLowerCase().includes(query));
+    }) : cachedHistory;
+
+    historyItemsContainer.innerHTML = '';
+
+    if (filtered.length === 0) {
+      historyEmpty.classList.remove('hidden');
+      return;
+    }
+
+    historyEmpty.classList.add('hidden');
+
+    filtered.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'history-item';
+
+      const isSent = item.action === 'sent';
+      const actionBadge = isSent ?
+        `<span class="history-badge history-badge-sent">📤 Sent</span>` :
+        `<span class="history-badge history-badge-downloaded">💾 Saved</span>`;
+
+      const typeBadge = item.type === 'book' ?
+        `<span class="history-badge history-badge-type">📚 Book (${item.chaptersCount || 1} ch)</span>` :
+        `<span class="history-badge history-badge-type">📄 Article</span>`;
+
+      const formattedTime = HistoryService.formatTime(item.timestamp);
+      const wordsText = item.wordCount ? `${(item.wordCount).toLocaleString()} words` : '';
+
+      el.innerHTML = `
+        <div class="history-item-top">
+          <div class="history-badges">
+            ${actionBadge}
+            ${typeBadge}
+          </div>
+          <button class="btn-delete-item" data-id="${item.id}" title="Remove from history">✕</button>
+        </div>
+        <a href="${item.url || '#'}" target="_blank" rel="noopener" class="history-title">${item.title || 'Untitled'}</a>
+        <div class="history-meta">
+          ${item.author ? `<span>By ${item.author}</span><span>·</span>` : ''}
+          ${item.siteName ? `<span>${item.siteName}</span><span>·</span>` : ''}
+          ${wordsText ? `<span>${wordsText}</span><span>·</span>` : ''}
+          <span>${formattedTime}</span>
+        </div>
+      `;
+
+      // Delete single item handler
+      el.querySelector('.btn-delete-item').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await HistoryService.deleteEntry(item.id);
+        renderHistory();
+      });
+
+      historyItemsContainer.appendChild(el);
+    });
+  }
+
+  inputHistorySearch.addEventListener('input', () => renderHistory());
+
+  btnClearHistory.addEventListener('click', async () => {
+    if (confirm('Clear all action history?')) {
+      await HistoryService.clearHistory();
+      renderHistory();
+    }
+  });
+
   // Extract Content from Active Tab
   async function extractActiveTab() {
     stateLoading.classList.remove('hidden');
     stateError.classList.add('hidden');
     viewArticle.classList.add('hidden');
     viewBook.classList.add('hidden');
+    viewHistory.classList.add('hidden');
 
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -359,6 +455,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
 
+      // Save to History
+      await HistoryService.addEntry({
+        type: 'article',
+        action: 'downloaded',
+        title: titleInput.value.trim() || currentArticle.title,
+        author: authorInput.value.trim() || currentArticle.byline,
+        url: currentArticle.url,
+        siteName: currentArticle.siteName,
+        filename: filename,
+        wordCount: currentArticle.wordCount || 0
+      });
+      loadHistoryBadge();
+
       setStatus('success', `Saved ${filename}`);
       setTimeout(clearStatus, 4000);
     } catch (err) {
@@ -407,6 +516,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         author: authorInput.value.trim() || currentArticle.byline,
         url: currentArticle.url
       });
+
+      // Save to History
+      await HistoryService.addEntry({
+        type: 'article',
+        action: 'sent',
+        title: titleInput.value.trim() || currentArticle.title,
+        author: authorInput.value.trim() || currentArticle.byline,
+        url: currentArticle.url,
+        siteName: currentArticle.siteName,
+        filename: filename,
+        wordCount: currentArticle.wordCount || 0,
+        recipient: currentSettings.kindleEmail
+      });
+      loadHistoryBadge();
 
       setStatus('success', `Sent to Kindle! (${currentSettings.kindleEmail})`);
       setArticleSentState(true);
@@ -511,6 +634,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
 
+      const totalWords = crawledChaptersData.reduce((sum, ch) => sum + (ch.wordCount || 0), 0);
+
+      // Save to History
+      await HistoryService.addEntry({
+        type: 'book',
+        action: 'downloaded',
+        title: bookTitleInput.value.trim() || 'Online Book',
+        author: bookAuthorInput.value.trim() || 'Author',
+        url: currentArticle?.url,
+        siteName: currentArticle?.siteName,
+        filename: filename,
+        chaptersCount: crawledChaptersData.length,
+        wordCount: totalWords
+      });
+      loadHistoryBadge();
+
       setBookStatus('success', `✓ Saved ${filename}`);
     } catch (err) {
       console.error('Download error:', err);
@@ -558,6 +697,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         url: currentArticle?.url
       });
 
+      const totalWords = crawledChaptersData.reduce((sum, ch) => sum + (ch.wordCount || 0), 0);
+
+      // Save to History
+      await HistoryService.addEntry({
+        type: 'book',
+        action: 'sent',
+        title: bookTitleInput.value.trim() || 'Online Book',
+        author: bookAuthorInput.value.trim() || 'Author',
+        url: currentArticle?.url,
+        siteName: currentArticle?.siteName,
+        filename: filename,
+        chaptersCount: crawledChaptersData.length,
+        wordCount: totalWords,
+        recipient: currentSettings.kindleEmail
+      });
+      loadHistoryBadge();
+
       setBookStatus('success', `✓ Book sent to Kindle! (${currentSettings.kindleEmail})`);
       setBookSentState(true);
 
@@ -575,6 +731,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function init() {
     await loadSettings();
+    await loadHistoryBadge();
     await extractActiveTab();
   }
 
