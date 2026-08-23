@@ -1,6 +1,6 @@
 /**
- * Web Article Content Extractor
- * Uses Readability to extract clean article reader mode content from the active tab.
+ * Web Article & Book Content Extractor
+ * Uses Readability to extract clean reader mode content and discovers multi-chapter book structures.
  */
 
 (function () {
@@ -25,7 +25,6 @@
       }
       const srcset = img.getAttribute('srcset');
       if (srcset) {
-        // Simple fallback to highest src or first
         img.removeAttribute('srcset');
       }
     });
@@ -47,7 +46,6 @@
 
       // Remove obvious non-content clutter before Readability
       const clutter = documentClone.querySelectorAll('header, footer, nav, aside, .cookie-banner, .modal, .popup, #comments, .comments, .ad, .advertisement, [aria-hidden="true"]');
-      // Only remove if it doesn't gut main content
       clutter.forEach(el => {
         if (!el.querySelector('article, main')) {
           el.remove();
@@ -89,6 +87,12 @@
         article.content = tempDiv.innerHTML;
       }
 
+      // Check for multi-chapter book / Table of Contents links
+      let discoveredChapters = [];
+      if (typeof BookCrawler !== 'undefined') {
+        discoveredChapters = BookCrawler.discoverChapters(document, window.location.href);
+      }
+
       // Calculate statistics
       const text = article.textContent || '';
       const words = text.trim().split(/\s+/).filter(Boolean).length;
@@ -107,7 +111,8 @@
           language: article.lang || document.documentElement.lang || 'en',
           url: window.location.href,
           wordCount: words,
-          readingTimeMinutes: readingTimeMinutes
+          readingTimeMinutes: readingTimeMinutes,
+          chapters: discoveredChapters
         }
       };
     } catch (err) {
@@ -124,6 +129,14 @@
     if (request.action === 'extractReaderContent') {
       const result = extractPageContent();
       sendResponse(result);
+      return true;
+    }
+    if (request.action === 'discoverBookChapters') {
+      let chapters = [];
+      if (typeof BookCrawler !== 'undefined') {
+        chapters = BookCrawler.discoverChapters(document, window.location.href);
+      }
+      sendResponse({ success: true, chapters });
       return true;
     }
   });

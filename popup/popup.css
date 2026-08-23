@@ -16,6 +16,9 @@
   --warning-bg: #fffbeb;
   --warning-border: #fef3c7;
   --warning-text: #92400e;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
+  --info-text: #1d4ed8;
   --error-bg: #fef2f2;
   --error-border: #fecaca;
   --error-text: #991b1b;
@@ -45,6 +48,9 @@
     --warning-bg: #451a03;
     --warning-border: #78350f;
     --warning-text: #fef3c7;
+    --info-bg: #172554;
+    --info-border: #1e40af;
+    --info-text: #93c5fd;
     --error-bg: #450a0a;
     --error-border: #7f1d1d;
     --error-text: #fee2e2;
@@ -58,9 +64,9 @@
 }
 
 body {
-  width: 380px;
-  min-height: 400px;
-  max-height: 580px;
+  width: 400px;
+  min-height: 420px;
+  max-height: 600px;
   font-family: var(--font-family);
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -74,7 +80,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  padding: 14px 16px 12px;
+  padding: 12px 14px 10px;
 }
 
 /* Header */
@@ -82,9 +88,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 12px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
 }
 
 .brand {
@@ -110,7 +115,7 @@ body {
   border: 1px solid transparent;
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
-  padding: 6px;
+  padding: 5px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -123,11 +128,59 @@ body {
   color: var(--text-primary);
 }
 
+/* Mode Tabs */
+.mode-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  margin-bottom: 10px;
+  gap: 4px;
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.tab-btn.active {
+  background: var(--bg-primary);
+  color: var(--primary-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-badge {
+  background: var(--primary-color);
+  color: var(--primary-text);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
 /* Banners */
 .banner {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: var(--radius-md);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -140,11 +193,17 @@ body {
   color: var(--warning-text);
 }
 
+.banner-info {
+  background-color: var(--info-bg);
+  border: 1px solid var(--info-border);
+  color: var(--info-text);
+}
+
 .banner-title {
   display: block;
   font-weight: 600;
   font-size: 12px;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .banner-text {
@@ -203,20 +262,20 @@ body {
   }
 }
 
-/* Article Card */
+/* Article / Book Card */
 .article-card {
   width: 100%;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 12px 14px;
-  margin-bottom: 14px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
   text-align: left;
 }
 
 .editable-title {
   width: 100%;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
   background: transparent;
@@ -239,11 +298,11 @@ body {
   outline: none;
 }
 
-.article-meta {
+.article-meta, .book-summary-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .badge {
@@ -258,11 +317,18 @@ body {
   font-weight: 500;
 }
 
+.badge-accent {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+  font-weight: 600;
+}
+
 .author-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 6px 0;
+  margin: 4px 0 6px;
   font-size: 12px;
 }
 
@@ -294,8 +360,8 @@ body {
 }
 
 .destination-row {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px dashed var(--border-color);
   display: flex;
   justify-content: space-between;
@@ -314,9 +380,9 @@ body {
 
 /* Accordion Preview */
 .preview-accordion {
-  margin-top: 10px;
+  margin-top: 8px;
   border-top: 1px solid var(--border-color);
-  padding-top: 8px;
+  padding-top: 6px;
 }
 
 .preview-toggle {
@@ -330,7 +396,7 @@ body {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .preview-toggle .chevron {
@@ -342,12 +408,12 @@ body {
 }
 
 .preview-panel {
-  max-height: 180px;
+  max-height: 140px;
   overflow-y: auto;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 10px;
+  padding: 8px;
   margin-top: 6px;
   font-size: 12px;
   line-height: 1.5;
@@ -361,11 +427,142 @@ body {
   border-radius: 4px;
 }
 
+/* Book Chapters List */
+.chapters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+  font-size: 11px;
+}
+
+.chapters-title {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.chapters-select-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.text-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+.text-btn:hover {
+  text-decoration: underline;
+}
+
+.divider {
+  color: var(--text-muted);
+}
+
+.chapters-list {
+  max-height: 150px;
+  overflow-y: auto;
+  margin-top: 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+
+.chapter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.1s ease;
+}
+
+.chapter-item:hover {
+  background: var(--bg-secondary);
+}
+
+.chapter-checkbox {
+  cursor: pointer;
+}
+
+.chapter-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chapter-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chapter-url {
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: monospace;
+}
+
+/* Progress Box */
+.progress-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.progress-bar-track {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.progress-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
 /* Status Indicator */
 .action-status {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   font-size: 12px;
   font-weight: 500;
   display: flex;
@@ -403,9 +600,9 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 9px 14px;
+  padding: 8px 12px;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   border: none;
@@ -454,11 +651,16 @@ body {
 
 .btn-outline {
   background: transparent;
-  border: 1px solid currentColor;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.btn-outline:hover {
+  background: var(--bg-tertiary);
 }
 
 .btn-sm {
-  padding: 4px 8px;
+  padding: 3px 8px;
   font-size: 11px;
   border-radius: var(--radius-sm);
 }
@@ -466,7 +668,7 @@ body {
 /* Footer */
 .footer {
   margin-top: auto;
-  padding-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid var(--border-color);
 }
 

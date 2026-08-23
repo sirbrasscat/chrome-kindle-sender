@@ -8,7 +8,7 @@ package-lock.json
 *.env
 
 # Local Test Artifacts
-test_sample.epub
+*.epub
 *.log
 
 # OS & Editor Files

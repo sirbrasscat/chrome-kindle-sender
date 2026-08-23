@@ -7,8 +7,9 @@ A modern Manifest V3 Chrome extension that captures web articles in clean reader
 ## ✨ Features
 
 - 📖 **Reader Mode Extraction**: Automatically extracts clean, ad-free article text, headings, author bylines, and images using Mozilla Readability.
-- 📚 **Standard Kindle EPUB 3 Format**: Compiles a standard EPUB 3 archive with navigation, metadata, cover styling, and e-ink optimized typography.
-- ⚡ **1-Click Direct Delivery**: Dispatches directly to your Amazon Send-to-Kindle address (`yourname@kindle.com`).
+- 📚 **Online Book & Documentation Converter**: Recursively discovers Table of Contents / chapter links on online books (such as [Thinking in Python](https://thinkinginpython.com/), GitBook, Sphinx, Docusaurus, mdBook), crawls chapters, and packages them into a complete multi-chapter book EPUB with full navigation.
+- 📚 **Standard Kindle EPUB 3 Format**: Compiles standard EPUB 3 archives with chapter navigation, metadata, cover styling, and e-ink optimized typography.
+- ⚡ **1-Click Direct Delivery**: Dispatches directly to your Amazon Send-to-Kindle address (`yourname@kindle.com`) with automatic grayed-out sent status.
 - 🌐 **Flexible Email Delivery Options**:
   - **Resend** (Recommended — free tier with 3,000 emails/mo)
   - **SendGrid API**

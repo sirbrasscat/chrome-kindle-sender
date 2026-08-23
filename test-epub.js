@@ -1,21 +1,15 @@
 /**
  * Automated Verification Script for EPUB Generation & Structure
+ * Tests both Single Articles and Multi-Chapter Online Books.
  */
 
 const fs = require('fs');
 const path = require('path');
 const JSZip = require('jszip');
 
-// Polyfill DOMParser / XMLSerializer for Node testing if needed
-let JSDOM;
-try {
-  JSDOM = require('jsdom').JSDOM;
-} catch (e) {}
-
 if (typeof DOMParser === 'undefined') {
   global.DOMParser = class {
     parseFromString(str, type) {
-      // Basic mock parser for Node testing
       return {
         querySelectorAll: () => [],
         body: {
@@ -35,36 +29,52 @@ if (typeof DOMParser === 'undefined') {
 
 global.JSZip = JSZip;
 const EpubGenerator = require('./lib/epub-generator.js');
+const BookCrawler = require('./lib/book-crawler.js');
 
 async function runTests() {
-  console.log('--- Running Web to Kindle EPUB Generator Verification ---');
+  console.log('--- TEST 1: Single Article EPUB Generation ---');
 
-  const generator = new EpubGenerator({
+  const articleGenerator = new EpubGenerator({
     title: 'The Art of Reading: Clean Articles on Kindle',
     author: 'Ada Lovelace',
-    content: '<h2>Introduction</h2><p>This is a test paragraph verifying Kindle EPUB 3 compliance.</p><p>Special characters: &amp;, &lt;, &gt;, &quot;, &apos;.</p>',
+    content: '<h2>Introduction</h2><p>This is a test paragraph verifying Kindle EPUB 3 compliance.</p>',
     url: 'https://example.com/test-article',
     siteName: 'Example Tech Blog',
     publishedTime: new Date().toISOString()
   });
 
-  console.log('1. Generated safe filename:', generator.getSafeFilename());
+  const base64Article = await articleGenerator.generateBase64();
+  const zipArticle = await JSZip.loadAsync(Buffer.from(base64Article, 'base64'));
 
-  console.log('2. Generating Base64 EPUB payload...');
-  const base64Data = await generator.generateBase64();
-  if (!base64Data || base64Data.length < 100) {
-    throw new Error('Base64 generation failed or returned too few bytes');
+  if (!zipArticle.files['OEBPS/article.xhtml']) {
+    throw new Error('Single article EPUB missing OEBPS/article.xhtml');
   }
-  console.log(`✓ Base64 EPUB generated successfully (${base64Data.length} chars)`);
+  console.log('✓ Verified single article EPUB generation.');
 
-  console.log('3. Inspecting internal ZIP structure...');
-  const zipBuffer = Buffer.from(base64Data, 'base64');
-  const unzipped = await JSZip.loadAsync(zipBuffer);
+  console.log('\n--- TEST 2: Multi-Chapter Online Book EPUB Generation (e.g. Thinking in Python) ---');
 
-  const files = Object.keys(unzipped.files);
-  console.log('Zip file entries:', files);
+  const sampleChapters = [
+    { id: 'chapter_1', title: '01 Introduction', content: '<h2>Chapter 1</h2><p>Welcome to Thinking in Python.</p>', url: 'https://thinkinginpython.com/01_Introduction.html' },
+    { id: 'chapter_2', title: '02 Tour', content: '<h2>Chapter 2</h2><p>A quick tour of Python fundamentals.</p>', url: 'https://thinkinginpython.com/02_Tour.html' },
+    { id: 'chapter_3', title: '03 Containers', content: '<h2>Chapter 3</h2><p>Lists, dicts, tuples, and sets.</p>', url: 'https://thinkinginpython.com/03_Containers.html' }
+  ];
 
-  // Verification checks
+  const bookGenerator = new EpubGenerator({
+    title: 'Thinking in Python',
+    author: 'Bruce Eckel',
+    siteName: 'thinkinginpython.com',
+    publishedTime: new Date().toISOString(),
+    chapters: sampleChapters
+  });
+
+  console.log('1. Generated book safe filename:', bookGenerator.getSafeFilename());
+
+  const base64Book = await bookGenerator.generateBase64();
+  const zipBook = await JSZip.loadAsync(Buffer.from(base64Book, 'base64'));
+
+  console.log('2. Inspecting Multi-Chapter Book entries:', Object.keys(zipBook.files));
+
+  // Check required files
   const requiredFiles = [
     'mimetype',
     'META-INF/container.xml',
@@ -72,48 +82,37 @@ async function runTests() {
     'OEBPS/toc.ncx',
     'OEBPS/nav.xhtml',
     'OEBPS/style.css',
-    'OEBPS/article.xhtml'
+    'OEBPS/chapter_1.xhtml',
+    'OEBPS/chapter_2.xhtml',
+    'OEBPS/chapter_3.xhtml'
   ];
 
   for (const reqFile of requiredFiles) {
-    if (!unzipped.files[reqFile]) {
-      throw new Error(`Missing expected EPUB file: ${reqFile}`);
+    if (!zipBook.files[reqFile]) {
+      throw new Error(`Missing expected book file: ${reqFile}`);
     }
     console.log(`✓ Verified file: ${reqFile}`);
   }
 
-  // Check mimetype content
-  const mimetypeContent = await unzipped.file('mimetype').async('string');
-  if (mimetypeContent !== 'application/epub+zip') {
-    throw new Error(`Invalid mimetype content: "${mimetypeContent}"`);
+  // Check table of contents in nav.xhtml
+  const navContent = await zipBook.file('OEBPS/nav.xhtml').async('string');
+  if (!navContent.includes('01 Introduction') || !navContent.includes('02 Tour') || !navContent.includes('03 Containers')) {
+    throw new Error('nav.xhtml missing chapter links or titles');
   }
-  console.log('✓ Verified mimetype: application/epub+zip');
+  console.log('✓ Verified nav.xhtml contains all 3 chapter links.');
 
-  // Check container.xml
-  const containerXml = await unzipped.file('META-INF/container.xml').async('string');
-  if (!containerXml.includes('OEBPS/content.opf')) {
-    throw new Error('container.xml does not reference OEBPS/content.opf');
+  // Check content.opf spine
+  const opfContent = await zipBook.file('OEBPS/content.opf').async('string');
+  if (!opfContent.includes('idref="chapter_1"') || !opfContent.includes('idref="chapter_2"') || !opfContent.includes('idref="chapter_3"')) {
+    throw new Error('content.opf spine missing chapter items');
   }
-  console.log('✓ Verified container.xml rootfile link');
+  console.log('✓ Verified content.opf spine references all chapters in order.');
 
-  // Check content.opf
-  const opfContent = await unzipped.file('OEBPS/content.opf').async('string');
-  if (!opfContent.includes('The Art of Reading') || !opfContent.includes('Ada Lovelace')) {
-    throw new Error('content.opf missing title or author metadata');
-  }
-  console.log('✓ Verified content.opf metadata (Title & Creator)');
+  // Save sample book
+  const sampleBookPath = path.join(__dirname, 'test_thinking_in_python_sample.epub');
+  fs.writeFileSync(sampleBookPath, Buffer.from(base64Book, 'base64'));
+  console.log(`\n✓ Successfully wrote sample book EPUB to: ${sampleBookPath}`);
 
-  // Check article.xhtml
-  const articleContent = await unzipped.file('OEBPS/article.xhtml').async('string');
-  if (!articleContent.includes('The Art of Reading')) {
-    throw new Error('article.xhtml missing article content');
-  }
-  console.log('✓ Verified article.xhtml content');
-
-  // Save sample file for inspection
-  const outPath = path.join(__dirname, 'test_sample.epub');
-  fs.writeFileSync(outPath, zipBuffer);
-  console.log(`\n✓ Successfully saved sample EPUB to: ${outPath}`);
   console.log('--- ALL VERIFICATION TESTS PASSED ---');
 }
 

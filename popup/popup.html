@@ -26,13 +26,44 @@
       </div>
     </header>
 
+    <!-- Mode Navigation Tabs -->
+    <nav class="mode-tabs">
+      <button id="tab-article" class="tab-btn active">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <span>Single Article</span>
+      </button>
+      <button id="tab-book" class="tab-btn">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+        <span>Online Book</span>
+        <span id="badge-book-chapters" class="tab-badge hidden">0</span>
+      </button>
+    </nav>
+
     <!-- Config Warning Banner -->
     <div id="unconfigured-banner" class="banner banner-warning hidden">
       <div class="banner-content">
         <span class="banner-title">Setup Required</span>
-        <p class="banner-text">Configure your Kindle email and provider in settings to enable 1-click delivery.</p>
+        <p class="banner-text">Configure your Kindle email in settings to enable direct delivery.</p>
       </div>
       <button id="btn-open-config" class="btn btn-sm btn-outline">Configure</button>
+    </div>
+
+    <!-- Book Detected Callout Banner -->
+    <div id="book-detected-banner" class="banner banner-info hidden">
+      <div class="banner-content">
+        <span class="banner-title">📚 Online Book Detected!</span>
+        <p class="banner-text" id="txt-detected-summary">Found table of contents with chapters.</p>
+      </div>
+      <button id="btn-switch-book" class="btn btn-sm btn-primary">Open Book Mode</button>
     </div>
 
     <!-- Main Content Area -->
@@ -57,8 +88,8 @@
         <button id="btn-retry" class="btn btn-secondary btn-sm">Try Again</button>
       </div>
 
-      <!-- Loaded / Ready State -->
-      <div id="state-ready" class="state-view hidden">
+      <!-- VIEW 1: Single Article View -->
+      <div id="view-article" class="view-panel">
         <div class="article-card">
           <div class="article-header">
             <input type="text" id="article-title" class="editable-title" placeholder="Article Title" />
@@ -135,6 +166,90 @@
           </button>
         </div>
       </div>
+
+      <!-- VIEW 2: Multi-Chapter Online Book View -->
+      <div id="view-book" class="view-panel hidden">
+        <div class="article-card">
+          <div class="article-header">
+            <input type="text" id="book-title" class="editable-title" placeholder="Book Title (e.g. Thinking in Python)" />
+          </div>
+
+          <div class="author-row">
+            <label for="book-author" class="field-label">Author:</label>
+            <input type="text" id="book-author" class="editable-field" placeholder="Book author (optional)" />
+          </div>
+
+          <div class="book-summary-row">
+            <span class="badge badge-accent" id="badge-chapters-count">0 Chapters</span>
+            <span class="badge" id="badge-book-stats">Ready to crawl</span>
+          </div>
+
+          <!-- Chapters Checklist Container -->
+          <div class="chapters-header">
+            <span class="chapters-title">Table of Contents / Chapters</span>
+            <div class="chapters-select-controls">
+              <button id="btn-select-all" class="text-btn">Select All</button>
+              <span class="divider">·</span>
+              <button id="btn-deselect-all" class="text-btn">Deselect</button>
+            </div>
+          </div>
+
+          <div id="chapters-list-container" class="chapters-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Crawl Progress Bar Area -->
+        <div id="crawl-progress-box" class="progress-box hidden">
+          <div class="progress-info">
+            <span id="txt-progress-label">Crawling chapters...</span>
+            <span id="txt-progress-percent">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+          <div class="progress-actions">
+            <button id="btn-cancel-crawl" class="btn btn-sm btn-outline">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Book Action Status Feedback -->
+        <div id="book-action-status" class="action-status hidden">
+          <div id="book-status-spinner" class="spinner-sm hidden"></div>
+          <span id="book-status-text" class="status-msg"></span>
+        </div>
+
+        <!-- Book Action Buttons -->
+        <div class="button-group" id="book-initial-actions">
+          <button id="btn-start-crawl" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Fetch &amp; Build Book EPUB</span>
+          </button>
+        </div>
+
+        <div class="button-group hidden" id="book-completed-actions">
+          <button id="btn-send-book-kindle" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            <span>Send Book to Kindle</span>
+          </button>
+          
+          <button id="btn-download-book-epub" class="btn btn-secondary" title="Download Complete Book EPUB">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>EPUB</span>
+          </button>
+        </div>
+      </div>
     </main>
 
     <!-- Footer -->
@@ -149,6 +264,7 @@
   <!-- Scripts -->
   <script src="../lib/jszip.min.js"></script>
   <script src="../lib/readability.js"></script>
+  <script src="../lib/book-crawler.js"></script>
   <script src="../lib/epub-generator.js"></script>
   <script src="../lib/email-service.js"></script>
   <script src="popup.js"></script>
