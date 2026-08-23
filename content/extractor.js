@@ -93,6 +93,22 @@
         discoveredChapters = BookCrawler.discoverChapters(document, window.location.href);
       }
 
+      // Discover prominent PDF download links on the page
+      const pdfLinks = [];
+      const pdfAnchors = document.querySelectorAll('a[href*=".pdf"], a[href*="/pdf/"], a[download*=".pdf"]');
+      pdfAnchors.forEach(a => {
+        const href = a.getAttribute('href');
+        if (href) {
+          try {
+            const abs = new URL(href, window.location.href).href;
+            const linkText = a.textContent.replace(/\s+/g, ' ').trim() || 'PDF Document';
+            if (!pdfLinks.some(p => p.url === abs)) {
+              pdfLinks.push({ title: linkText, url: abs });
+            }
+          } catch (e) {}
+        }
+      });
+
       // Calculate statistics
       const text = article.textContent || '';
       const words = text.trim().split(/\s+/).filter(Boolean).length;
@@ -112,7 +128,8 @@
           url: window.location.href,
           wordCount: words,
           readingTimeMinutes: readingTimeMinutes,
-          chapters: discoveredChapters
+          chapters: discoveredChapters,
+          pdfLinks: pdfLinks
         }
       };
     } catch (err) {

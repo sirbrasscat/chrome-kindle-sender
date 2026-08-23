@@ -331,8 +331,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         throw new Error('No active browser tab found.');
       }
 
-      // Check if the current tab is directly opening a PDF file
-      if (tab.url && (tab.url.toLowerCase().endsWith('.pdf') || tab.url.includes('.pdf?'))) {
+      // Helper to check if tab is displaying a PDF
+      const urlLower = (tab.url || '').toLowerCase();
+      const titleLower = (tab.title || '').toLowerCase();
+      const isDirectPdf = urlLower.endsWith('.pdf') ||
+                          urlLower.includes('.pdf?') ||
+                          urlLower.includes('.pdf#') ||
+                          urlLower.includes('/pdf/') ||
+                          urlLower.endsWith('/pdf') ||
+                          urlLower.includes('format=pdf') ||
+                          urlLower.includes('application/pdf') ||
+                          urlLower.startsWith('chrome-extension://') && urlLower.includes('pdf') ||
+                          titleLower.endsWith('.pdf') ||
+                          titleLower.endsWith('.pdf - google chrome');
+
+      // If active tab is directly viewing a PDF file, immediately handle as PDF
+      if (isDirectPdf) {
         handlePdfUrlDetected(tab.url, tab.title);
         stateLoading.classList.add('hidden');
         switchTab('pdf');
@@ -394,6 +408,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         badgeBookChapters.classList.add('hidden');
         bookDetectedBanner.classList.add('hidden');
+      }
+
+      // Check for PDF links discovered on the webpage
+      if (currentArticle.pdfLinks && currentArticle.pdfLinks.length > 0) {
+        const firstPdf = currentArticle.pdfLinks[0];
+        badgePdfDetected.classList.remove('hidden');
+        txtPdfDetectedSummary.textContent = `Found PDF document: ${firstPdf.title}`;
+        pdfDetectedBanner.classList.remove('hidden');
+        btnSwitchPdf.onclick = () => {
+          loadPdfFromSource(firstPdf.url, firstPdf.title);
+          switchTab('pdf');
+        };
+      } else {
+        badgePdfDetected.classList.add('hidden');
+        pdfDetectedBanner.classList.add('hidden');
       }
 
       stateLoading.classList.add('hidden');
