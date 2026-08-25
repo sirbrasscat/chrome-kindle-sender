@@ -770,6 +770,44 @@ body {
   color: var(--text-secondary);
 }
 
+.history-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-resend-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.btn-resend-item:hover:not(:disabled) {
+  background: var(--primary-color);
+  color: var(--primary-text);
+  border-color: var(--primary-color);
+}
+
+.btn-resend-item.resending {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.btn-resend-item.resent {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
 .btn-delete-item {
   background: transparent;
   border: none;

@@ -1,6 +1,6 @@
 /**
  * Web to Kindle Extension - Popup Controller
- * Supports Single Article, Multi-Chapter Online Book conversion, PDF Documents, and Action History tracking.
+ * Supports Single Article, Persistent Background Book Crawling, PDF Documents, and Action History with Resend.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -109,8 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentSettings = null;
   let detectedChapters = [];
   let crawledChaptersData = null;
-  let activeAbortController = null;
-  let loadedPdfData = null; // { file, uint8Array, base64, processed }
+  let loadedPdfData = null;
   let isArticleSent = false;
   let isBookSent = false;
   let isPdfSent = false;
@@ -231,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // History Management & Rendering
+  // History Management & Rendering with RESEND Button
   async function loadHistoryBadge() {
     cachedHistory = await HistoryService.getHistory();
     if (cachedHistory.length > 0) {
@@ -287,7 +286,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${actionBadge}
             ${typeBadge}
           </div>
-          <button class="btn-delete-item" data-id="${item.id}" title="Remove from history">✕</button>
+          <div class="history-item-actions">
+            <button class="btn-resend-item" data-id="${item.id}" title="Resend to Kindle (${currentSettings?.kindleEmail || 'Kindle'})">🔄 Resend</button>
+            <button class="btn-delete-item" data-id="${item.id}" title="Remove from history">✕</button>
+          </div>
         </div>
         <a href="${item.url || '#'}" target="_blank" rel="noopener" class="history-title">${item.title || 'Untitled'}</a>
         <div class="history-meta">
@@ -298,6 +300,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       `;
 
+      // Resend Item Handler
+      const resendBtn = el.querySelector('.btn-resend-item');
+      resendBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        resendBtn.disabled = true;
+        resendBtn.classList.add('resending');
+        resendBtn.textContent = '⏳ Sending...';
+
+        try {
+          const resp = await chrome.runtime.sendMessage({ action: 'resendHistoryItem', item });
+          if (!resp || !resp.success) {
+            throw new Error(resp?.error || 'Failed to resend item to Kindle.');
+          }
+          resendBtn.classList.remove('resending');
+          resendBtn.classList.add('resent');
+          resendBtn.textContent = '✓ Sent';
+          setTimeout(() => renderHistory(), 2500);
+        } catch (err) {
+          console.error('Resend error:', err);
+          alert(`Failed to resend to Kindle: ${err.message}`);
+          resendBtn.disabled = false;
+          resendBtn.classList.remove('resending');
+          resendBtn.textContent = '🔄 Resend';
+        }
+      });
+
+      // Delete Item Handler
       el.querySelector('.btn-delete-item').addEventListener('click', async (e) => {
         e.stopPropagation();
         await HistoryService.deleteEntry(item.id);
@@ -316,8 +345,81 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Listen for Background Job Progress Updates (Persistent crawling)
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === 'jobProgress' && message.job) {
+      updateCrawlProgressUI(message.job);
+    }
+  });
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.activeJob) {
+      const job = changes.activeJob.newValue;
+      if (job) {
+        updateCrawlProgressUI(job);
+      }
+    }
+  });
+
+  function updateCrawlProgressUI(job) {
+    if (job.status === 'crawling') {
+      crawlProgressBox.classList.remove('hidden');
+      bookInitialActions.classList.add('hidden');
+      bookCompletedActions.classList.add('hidden');
+      bookActionStatus.classList.add('hidden');
+
+      txtProgressLabel.textContent = `Fetching ${job.current}/${job.total}: ${job.chapterTitle || 'Crawling...'}`;
+      txtProgressPercent.textContent = `${job.percent}%`;
+      progressBarFill.style.width = `${job.percent}%`;
+    } else if (job.status === 'compiled') {
+      crawlProgressBox.classList.add('hidden');
+      bookInitialActions.classList.add('hidden');
+      bookCompletedActions.classList.remove('hidden');
+      badgeBookStats.textContent = `${(job.totalWords || 0).toLocaleString()} words (~${((job.totalWords || 0)/12000).toFixed(1)} hrs)`;
+      setBookStatus('success', `✓ Successfully compiled ${job.chaptersCount || job.total} chapters!`);
+      setBookSentState(false);
+    } else if (job.status === 'sent') {
+      crawlProgressBox.classList.add('hidden');
+      bookInitialActions.classList.add('hidden');
+      bookCompletedActions.classList.remove('hidden');
+      setBookStatus('success', `✓ Book sent to Kindle! (${currentSettings?.kindleEmail || ''})`);
+      setBookSentState(true);
+    } else if (job.status === 'error') {
+      crawlProgressBox.classList.add('hidden');
+      bookInitialActions.classList.remove('hidden');
+      setBookStatus('error', `Crawl stopped: ${job.error || 'Unknown error'}`);
+    }
+  }
+
+  // Restore Background Job State on Popup Open
+  async function checkAndRestoreActiveJob() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['activeJob', 'compiledBookData'], (res) => {
+        const job = res.activeJob;
+        if (job) {
+          if (res.compiledBookData) {
+            crawledChaptersData = res.compiledBookData;
+          }
+          if (job.bookTitle) bookTitleInput.value = job.bookTitle;
+          if (job.bookAuthor) bookAuthorInput.value = job.bookAuthor;
+
+          if (job.status === 'crawling' || job.status === 'compiled' || job.status === 'sent') {
+            updateCrawlProgressUI(job);
+            switchTab('book');
+            resolve(true);
+            return;
+          }
+        }
+        resolve(false);
+      });
+    });
+  }
+
   // Extract Content from Active Tab
   async function extractActiveTab() {
+    // First check if an active background job was already in progress
+    const restoredJob = await checkAndRestoreActiveJob();
+
     stateLoading.classList.remove('hidden');
     stateError.classList.add('hidden');
     viewArticle.classList.add('hidden');
@@ -331,7 +433,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         throw new Error('No active browser tab found.');
       }
 
-      // Helper to check if tab is displaying a PDF
+      // Check if tab is directly viewing a PDF file
       const urlLower = (tab.url || '').toLowerCase();
       const titleLower = (tab.title || '').toLowerCase();
       const isDirectPdf = urlLower.endsWith('.pdf') ||
@@ -345,16 +447,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                           titleLower.endsWith('.pdf') ||
                           titleLower.endsWith('.pdf - google chrome');
 
-      // If active tab is directly viewing a PDF file, immediately handle as PDF
       if (isDirectPdf) {
         handlePdfUrlDetected(tab.url, tab.title);
         stateLoading.classList.add('hidden');
-        switchTab('pdf');
+        if (!restoredJob) switchTab('pdf');
         return;
       }
 
       if (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
-        throw new Error('Cannot extract reader content from browser internal pages.');
+        if (!restoredJob) {
+          throw new Error('Cannot extract reader content from browser internal pages.');
+        }
+        stateLoading.classList.add('hidden');
+        return;
       }
 
       // Inject scripts into tab
@@ -370,7 +475,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Request extraction
       const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractReaderContent' });
       if (!response || !response.success || !response.article) {
-        throw new Error(response?.error || 'Could not extract reader article from this page.');
+        if (!restoredJob) {
+          throw new Error(response?.error || 'Could not extract reader article from this page.');
+        }
+        stateLoading.classList.add('hidden');
+        return;
       }
 
       currentArticle = response.article;
@@ -426,13 +535,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       stateLoading.classList.add('hidden');
-      switchTab('article');
+      if (!restoredJob) {
+        switchTab('article');
+      }
 
     } catch (err) {
-      console.error('Extraction failed:', err);
-      errorMessage.textContent = err.message || 'Failed to extract content.';
-      stateLoading.classList.add('hidden');
-      stateError.classList.remove('hidden');
+      console.error('Extraction error:', err);
+      if (!restoredJob) {
+        errorMessage.textContent = err.message || 'Failed to extract content.';
+        stateLoading.classList.add('hidden');
+        stateError.classList.remove('hidden');
+      } else {
+        stateLoading.classList.add('hidden');
+      }
     }
   }
 
@@ -457,8 +572,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (article.title.includes(' — ') || article.title.includes(' - ')) {
       cleanBookTitle = article.title.split(/ [—-]/)[0].trim();
     }
-    bookTitleInput.value = cleanBookTitle;
-    bookAuthorInput.value = article.byline || '';
+    if (!bookTitleInput.value) bookTitleInput.value = cleanBookTitle;
+    if (!bookAuthorInput.value) bookAuthorInput.value = article.byline || '';
     badgeChaptersCount.textContent = `${chapters.length} Chapters`;
     badgeBookStats.textContent = 'Ready to compile';
 
@@ -476,10 +591,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       chaptersListContainer.appendChild(item);
     });
 
-    crawledChaptersData = null;
-    bookInitialActions.classList.remove('hidden');
-    bookCompletedActions.classList.add('hidden');
-    setBookSentState(false);
+    if (!crawledChaptersData) {
+      bookInitialActions.classList.remove('hidden');
+      bookCompletedActions.classList.add('hidden');
+      setBookSentState(false);
+    }
   }
 
   // PDF Handling Logic
@@ -491,7 +607,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadPdfFromSource(pdfUrl, defaultTitle);
   }
 
-  // PDF Dropzone and File Picker
   pdfDropZone.addEventListener('click', () => inputPdfFile.click());
   pdfDropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -539,14 +654,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         result
       };
 
-      // Display metadata in info card
       pdfTitleInput.value = result.metadata.title || fallbackTitle || 'PDF Document';
       pdfAuthorInput.value = result.metadata.author || '';
       badgePdfPages.textContent = `${result.pageCount} Pages`;
       badgePdfSize.textContent = `${result.metadata.sizeMB} MB`;
       badgePdfStatus.textContent = `${(result.totalWords).toLocaleString()} words`;
 
-      // Check size warning (> 25MB)
       const isOver25MB = (result.sizeBytes / (1024 * 1024)) > 25;
       pdfSizeWarning.classList.toggle('hidden', !isOver25MB);
 
@@ -578,7 +691,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     pdfStatusText.textContent = message;
   }
 
-  // PDF Action 1: Send Raw PDF directly to Kindle
+  // PDF Action 1: Send Raw PDF to Kindle
   btnSendRawPdf.addEventListener('click', async () => {
     if (!loadedPdfData || !loadedPdfData.result) return;
 
@@ -605,7 +718,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         url: typeof loadedPdfData.source === 'string' ? loadedPdfData.source : ''
       });
 
-      // Save to History
       await HistoryService.addEntry({
         type: 'pdf',
         action: 'sent',
@@ -668,7 +780,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         url: typeof loadedPdfData.source === 'string' ? loadedPdfData.source : ''
       });
 
-      // Save to History
       await HistoryService.addEntry({
         type: 'book',
         action: 'sent',
@@ -723,7 +834,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
 
-      // Save to History
       await HistoryService.addEntry({
         type: 'book',
         action: 'downloaded',
@@ -909,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Book Mode: Start Recursive Crawl
+  // Book Mode: Start Background Crawl (Persistent)
   btnStartCrawl.addEventListener('click', async () => {
     const checkedBoxes = Array.from(chaptersListContainer.querySelectorAll('.chapter-checkbox:checked'));
     if (checkedBoxes.length === 0) {
@@ -923,7 +1033,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       url: decodeURIComponent(cb.dataset.url)
     }));
 
-    activeAbortController = new AbortController();
     crawlProgressBox.classList.remove('hidden');
     bookInitialActions.classList.add('hidden');
     bookActionStatus.classList.add('hidden');
@@ -932,38 +1041,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     txtProgressLabel.textContent = `Starting crawl for ${selectedChapters.length} chapters...`;
 
     try {
-      crawledChaptersData = await BookCrawler.crawlChapters(selectedChapters, {
-        signal: activeAbortController.signal,
-        onProgress: (p) => {
-          txtProgressLabel.textContent = `Fetching ${p.current}/${p.total}: ${p.chapterTitle}`;
-          txtProgressPercent.textContent = `${p.percent}%`;
-          progressBarFill.style.width = `${p.percent}%`;
+      const response = await chrome.runtime.sendMessage({
+        action: 'startBackgroundCrawl',
+        payload: {
+          bookTitle: bookTitleInput.value.trim() || 'Online Book',
+          bookAuthor: bookAuthorInput.value.trim() || '',
+          selectedChapters: selectedChapters,
+          autoSendKindle: false,
+          sourceUrl: currentArticle?.url || '',
+          siteName: currentArticle?.siteName || ''
         }
       });
 
-      const totalWords = crawledChaptersData.reduce((sum, ch) => sum + (ch.wordCount || 0), 0);
-      const estHours = (totalWords / 12000).toFixed(1);
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'Failed to start background crawl');
+      }
 
-      badgeBookStats.textContent = `${totalWords.toLocaleString()} words (~${estHours} hrs)`;
-      crawlProgressBox.classList.add('hidden');
-      bookCompletedActions.classList.remove('hidden');
-      setBookStatus('success', `✓ Successfully compiled ${crawledChaptersData.length} chapters!`);
-      setBookSentState(false);
+      if (response.chapters) {
+        crawledChaptersData = response.chapters;
+      }
 
     } catch (err) {
-      console.error('Crawl error:', err);
+      console.error('Crawl trigger error:', err);
       crawlProgressBox.classList.add('hidden');
       bookInitialActions.classList.remove('hidden');
-      setBookStatus('error', `Crawl stopped: ${err.message}`);
-    } finally {
-      activeAbortController = null;
+      setBookStatus('error', `Crawl failed: ${err.message}`);
     }
   });
 
-  btnCancelCrawl.addEventListener('click', () => {
-    if (activeAbortController) {
-      activeAbortController.abort();
-    }
+  // Cancel Crawl
+  btnCancelCrawl.addEventListener('click', async () => {
+    await chrome.runtime.sendMessage({ action: 'cancelBackgroundJob' });
+    crawlProgressBox.classList.add('hidden');
+    bookInitialActions.classList.remove('hidden');
+    setBookStatus('error', 'Crawl canceled.');
   });
 
   // Book Mode: Download Complete Book EPUB

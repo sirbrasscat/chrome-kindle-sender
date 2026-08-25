@@ -58,7 +58,9 @@ async function validateExtension() {
     },
     chrome: {
       runtime: {
-        onInstalled: { addListener: () => {} }
+        onInstalled: { addListener: () => {} },
+        onMessage: { addListener: () => {} },
+        sendMessage: () => Promise.resolve({})
       },
       contextMenus: {
         create: () => {},
